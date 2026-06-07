@@ -6,9 +6,9 @@ uniform vec4 resolution;
 uniform vec2 mouse;
 
 // 7 bits: 127 for the number 8
-struct TwoDigitSegment { 
-	lowp int tens; 
-	lowp int ones; 
+struct TwoDigitSegment {
+	lowp int tens;
+	lowp int ones;
 };
 
 uniform TwoDigitSegment seconds;
@@ -59,7 +59,7 @@ vec3 rotate( vec3 v, vec3 axis, float angle )
 }
 
 // cubic polynomial
-float smin( float a, float b, float k) 
+float smin( float a, float b, float k)
 {
     k *= 6.0;
     float h = max( k-abs(a-b), 0.0 )/k;
@@ -67,13 +67,13 @@ float smin( float a, float b, float k)
 }
 
 // 3D SDFs
-float boxSDF( vec3 p, vec3 b ) 
+float boxSDF( vec3 p, vec3 b )
 {
   vec3 q = abs(p) - b;
   return length(max(q,0.0)) + min(max(q.x,max(q.y,q.z)),0.0);
 }
 
-float capsuleSDF( vec3 p, vec3 a, vec3 b, float r ) 
+float capsuleSDF( vec3 p, vec3 a, vec3 b, float r )
 {
   vec3 pa = p - a, ba = b - a;
   float h = clamp(dot(pa,ba)/dot(ba,ba), 0.0, 1.0);
@@ -161,37 +161,20 @@ float sdf( vec3 p )
 
     // float mouse = sphereSDF(p - vec3(mouse * resolution.zw * CAMERAZ, 0.0), side * CAMERAZ * 0.75);
     vec3 pt = rotate(p - vec3(mouse * resolution.zw * CAMERAZ, 0.0), vec3(1.0), delta);
-    float mouse = boxSDF(pt, vec3(side * CAMERAZ * 0.75));
+    float mouseSDF = boxSDF(pt, vec3(side * CAMERAZ * 0.75));
 
-    return smin(mouse, value, side * CAMERAZ * 0.25);
+    return smin(mouseSDF, value, side * CAMERAZ * 0.25);
 }
 
 
 vec3 calcNormal( in vec3 p )
 {
-    // Regular central differentiation method with 6 calls
-    // const float h = 0.0001;
-    // return normalize(vec3(
-    //     sdf(p + vec3(h, 0.0, 0.0)) - sdf(p - vec3(h, 0.0, 0.0)),
-    //     sdf(p + vec3(0.0, h, 0.0)) - sdf(p - vec3(0.0, h, 0.0)),
-    //     sdf(p + vec3(0.0, 0.0, h)) - sdf(p - vec3(0.0, 0.0, h))
-    // ));
-
-    // Regular right-sided differentiation method with 3 calls
-    // Optimised, but less accurate and with right-sided bias
-    // const float h = 0.0001;
-    // return normalize(vec3(
-    //     sdf(p + vec3(h, 0.0, 0.0)),
-    //     sdf(p + vec3(0.0, h, 0.0)),
-    //     sdf(p + vec3(0.0, 0.0, h))
-    // ));
-
     // Tetrahedron differentiation method with 4 calls
     const float h = 0.0001;
     const vec2 k = vec2(1,-1);
-    return normalize( k.xyy * sdf( p + k.xyy*h ) + 
-                      k.yyx * sdf( p + k.yyx*h ) + 
-                      k.yxy * sdf( p + k.yxy*h ) + 
+    return normalize( k.xyy * sdf( p + k.xyy*h ) +
+                      k.yyx * sdf( p + k.yyx*h ) +
+                      k.yxy * sdf( p + k.yxy*h ) +
                       k.xxx * sdf( p + k.xxx*h ) );
 }
 
@@ -200,7 +183,7 @@ float rayMarch( vec3 rayOrigin, vec3 ray, float tmin, float tmax )
     float t = tmin;
     // estimated maximum needed distance optimised for performance
     // may need to be increased for other sdf configurations
-    for ( int i = 0; i < MAXITERATION && t <= tmax; i++ ) 
+    for ( int i = 0; i < MAXITERATION && t <= tmax; i++ )
     {
         vec3 p = rayOrigin + ray * t;
         float d = sdf(p);
@@ -213,13 +196,13 @@ float rayMarch( vec3 rayOrigin, vec3 ray, float tmin, float tmax )
 void main()
 {
     lowp vec3 cameraPos = vec3(0.0, 0.0, CAMERAZ);
-    
+
     vec3 ray = normalize(vec3((vUv - vec2(0.5)) * 2.0 * resolution.zw, -1));
 
     lowp vec3 color = vec3(1.0);
 
     float t = rayMarch(cameraPos, ray, 0.0, 2.0 * CAMERAZ);
-    if ( t > 0.0 ) 
+    if ( t > 0.0 )
     {
         vec3 p = cameraPos + ray * t;
         vec3 normal = calcNormal(p);
@@ -228,7 +211,7 @@ void main()
         color = vec3(fresnel);
         gl_FragColor = vec4(color, 1.0);
     }
-    else 
+    else
     {
         gl_FragColor = vec4(1.0);
     }
