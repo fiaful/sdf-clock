@@ -113,29 +113,30 @@ float segmentPairSDF( vec3 p, lowp int activeFirstSegments, lowp int activeSecon
 float sdf( vec3 p )
 {
     float side = min(resolution.z, resolution.w) * 0.1;
+    float len  = side * CAMERAZ;
 
     float hourSegments = segmentPairSDF(
-        p - vec3(0.0, 3.0 * 2.0 * side * CAMERAZ, 0.0),
+        p - vec3(0.0, 3.0 * 2.0 * len, 0.0),
         hours.tens,
         hours.ones,
-        side * CAMERAZ
+        len
     );
 
     float minuteSegments = segmentPairSDF(
         p,
         minutes.tens,
         minutes.ones,
-        side * CAMERAZ
+        len
     );
 
     float secondSegments = segmentPairSDF(
-        p - vec3(0.0, -3.0 * 2.0 * side * CAMERAZ, 0.0),
+        p - vec3(0.0, -3.0 * 2.0 * len, 0.0),
         seconds.tens,
         seconds.ones,
-        side * CAMERAZ
+        len
     );
 
-    float value = min(
+    float clock = min(
         hourSegments,
         min(
             minuteSegments,
@@ -144,9 +145,9 @@ float sdf( vec3 p )
     );
 
     vec3 pt = rotate(p - vec3(mouse * resolution.zw * CAMERAZ, 0.0), vec3(1.0), delta);
-    float mouseSDF = boxSDF(pt, vec3(side * CAMERAZ * 0.75));
+    float mouseSDF = boxSDF(pt, vec3(len * 0.75));
 
-    return smin(mouseSDF, value, side * CAMERAZ * 0.25);
+    return smin(mouseSDF, clock, len * 0.25);
 }
 
 
@@ -164,14 +165,53 @@ vec3 calcNormal( in vec3 p )
 float rayMarch( vec3 rayOrigin, vec3 ray, float tmin, float tmax )
 {
     float t = tmin;
-    // estimated maximum needed distance optimised for performance
-    // may need to be increased for other sdf configurations
+
+    // Precompute loop-invariant bounding geometry in world space.
+    // These are used for cheap sphere tests that decide whether to call the
+    // full sdf() (expensive: up to 42 capsule evals) or take a large safe step.
+    float side = min(resolution.z, resolution.w) * 0.1;
+    float len  = side * CAMERAZ;
+
+    // Conservative bounding sphere for each digit pair (see derivation in sdf()).
+    float groupRadius = len * 4.0;
+
+    // Circumsphere of the rotating mouse cube: the cube has half-side s, so its
+    // diagonal = s*sqrt(3) ≈ 1.7321. This sphere contains the cube in every orientation.
+    float mouseRadius = len * 0.75 * 1.7321;
+
+    vec3 hourOffset   = vec3(0.0,  6.0 * len, 0.0);
+    vec3 secondOffset = vec3(0.0, -6.0 * len, 0.0);
+    vec3 mousePos     = vec3(mouse * resolution.zw * CAMERAZ, 0.0);
+
+    // smin with k_in = side*CAMERAZ*0.25 can pull the field inward by at most k_in.
+    // We only use the fast path when minBound > sminK, which guarantees the true
+    // SDF is > 0 (no missed hit) and the step minBound-sminK is positive.
+    float sminK = len * 0.25;
+
     for ( int i = 0; i < MAXITERATION && t <= tmax; i++ )
     {
         vec3 p = rayOrigin + ray * t;
-        float d = sdf(p);
-        if (d < 0.001) return t;
-        t += d;
+
+        // Four cheap sphere SDFs — O(1) each, no rotation needed.
+        // When all geometry is outside its bounding sphere from p, the true SDF
+        // (which uses smin) is ≥ minBound − sminK, so we can step that far safely.
+        float hourBound   = sphereSDF(p - hourOffset,   groupRadius);
+        float minuteBound = sphereSDF(p,                groupRadius);
+        float secondBound = sphereSDF(p - secondOffset, groupRadius);
+        float mouseBound  = sphereSDF(p - mousePos,     mouseRadius);
+
+        float minBound = min(mouseBound, min(hourBound, min(minuteBound, secondBound)));
+
+        if (minBound > sminK)
+        {
+            t += minBound + sminK;
+        }
+        else
+        {
+            float d = sdf(p);
+            if (d < 0.001) return t;
+            t += d;
+        }
     }
     return -1.0;
 }
