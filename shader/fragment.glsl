@@ -87,33 +87,17 @@ float sphereSDF( vec3 p, float r )
 
 float segmentSDF( vec3 p, lowp int activeSegments, float len, float radius )
 {
-    float value;
-    bool firstSegmentDrawn = false;
-    for ( int i = 0; i < 7; i++ ) 
+    // initialise to a large value so an all-inactive digit returns a safe large distance
+    float value = 1e10;
+    for ( int i = 0; i < 7; i++ )
     {
         if ( getSegmentActive(activeSegments, i) )
         {
             vec2 start = SEGMENTS[i * 2] * vec2(len, len*2.0);
             vec2 end   = SEGMENTS[i * 2 + 1] * vec2(len, len*2.0);
-            float capsule = capsuleSDF(
-                p, 
-                vec3(start, 0.0), 
-                vec3(end, 0.0), 
-                radius
-            );
-            
-            if ( firstSegmentDrawn )
-            {
-                value = min(capsule, value);
-            }
-            else 
-            {
-                value = capsule;
-                firstSegmentDrawn = true;
-            }
+            value = min(value, capsuleSDF(p, vec3(start, 0.0), vec3(end, 0.0), radius));
         }
     }
-
     return value;
 }
 
