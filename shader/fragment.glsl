@@ -131,23 +131,23 @@ float sdf( vec3 p )
     float side = min(resolution.z, resolution.w) * 0.1;
 
     float hourSegments = segmentPairSDF(
-        p - vec3(0.0, 3.0 * 2.0 * side * CAMERAZ, 0.0), 
-        hours.tens, 
-        hours.ones, 
+        p - vec3(0.0, 3.0 * 2.0 * side * CAMERAZ, 0.0),
+        hours.tens,
+        hours.ones,
         side * CAMERAZ
     );
 
     float minuteSegments = segmentPairSDF(
-        p, 
-        minutes.tens, 
+        p,
+        minutes.tens,
         minutes.ones,
         side * CAMERAZ
     );
-    
+
     float secondSegments = segmentPairSDF(
-        p - vec3(0.0, -3.0 * 2.0 * side * CAMERAZ, 0.0), 
-        seconds.tens, 
-        seconds.ones, 
+        p - vec3(0.0, -3.0 * 2.0 * side * CAMERAZ, 0.0),
+        seconds.tens,
+        seconds.ones,
         side * CAMERAZ
     );
 
@@ -159,7 +159,6 @@ float sdf( vec3 p )
         )
     );
 
-    // float mouse = sphereSDF(p - vec3(mouse * resolution.zw * CAMERAZ, 0.0), side * CAMERAZ * 0.75);
     vec3 pt = rotate(p - vec3(mouse * resolution.zw * CAMERAZ, 0.0), vec3(1.0), delta);
     float mouseSDF = boxSDF(pt, vec3(side * CAMERAZ * 0.75));
 
