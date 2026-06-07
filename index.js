@@ -19,7 +19,7 @@ function init() {
     const canvas = document.getElementById('sdf');
     // Size will be set on first onWindowResize call
     renderer = new THREE.WebGLRenderer({ antialias: true, canvas });
-    renderer.setPixelRatio( window.devicePixelRatio );
+    renderer.setPixelRatio( Math.min(window.devicePixelRatio, 1.5) );
     renderer.autoClearColor = false;
 
     const frustumWidth = 2;

@@ -16,7 +16,7 @@ uniform TwoDigitSegment minutes;
 uniform TwoDigitSegment hours;
 
 // raymarching
-const int MAXITERATION = 100;
+const int MAXITERATION = 72;
 
 // camera
 const lowp float CAMERAZ = 5.0;
